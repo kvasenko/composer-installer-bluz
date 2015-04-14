@@ -25,6 +25,6 @@
         }
     },
     "extra": {
-        "class": "Bashmach\\Composer\\BluzModuleInstallerPlugin"
+        "class": "Bashmach\\Composer\\Installers\\BluzModuleInstallerPlugin"
     }
 }
