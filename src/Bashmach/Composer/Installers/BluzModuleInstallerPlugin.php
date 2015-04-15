@@ -103,7 +103,7 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
             $testModelPath = $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'];
             if (is_dir($testModelPath)) {
                 @mkdir($testModelPath, 0755);
-                $this->removeDir($testModelPath . DS . 'controllers');
+                $this->removeDir($testModelPath);
             }
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models' . DS,
                 $testModelPath . DS);
