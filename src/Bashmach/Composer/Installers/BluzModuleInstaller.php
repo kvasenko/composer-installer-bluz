@@ -9,8 +9,11 @@ namespace Bashmach\Composer\Installers;
 use Composer\Package\PackageInterface;
 use Composer\Installer\LibraryInstaller;
 
+
 class BluzModuleInstaller extends LibraryInstaller
 {
+
+    protected $settings;
     /**
      * {@inheritDoc}
      */
@@ -20,14 +23,14 @@ class BluzModuleInstaller extends LibraryInstaller
 
         $extra     = $package->getExtra();
         $rootExtra = $this->composer->getPackage()->getExtra();
-        $settings  = array_merge($rootExtra['bluz'], $extra['bluz']);
-        if (empty($settings['modules_path'])) {
+        $this->settings  = array_merge($rootExtra['bluz'], $extra['bluz']);
+        if (empty($this->settings['modules_path'])) {
             throw new \Exception('modules_path is not defined');
         }
-        if (empty($settings['module_name'])) {
+        if (empty($this->settings['module_name'])) {
             throw new \Exception('module_name is not defined');
         }
-        $path = $settings['modules_path'] . '/' . $settings['module_name'];
+        $path = $this->settings['modules_path'] . '/' . $this->settings['module_name'];
 
         return $path;
     }
@@ -43,4 +46,11 @@ class BluzModuleInstaller extends LibraryInstaller
     {
 
     }
+
+    public function getSettings()
+    {
+        return $this->settings;
+    }
+
+
 }
