@@ -115,7 +115,7 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
                 $this->removeDir($testModulePath);
             }
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules' . DS,
-                $testModulePath . DS);
+                $testModulePath . DS . 'controllers' . DS);
         }
 
         // Remove folders
