@@ -56,41 +56,65 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $modules_path = $rootPath . DS . $settings['modules_path'] . DS;
         $publicPath = $rootPath . DS . 'public';
 
-        $controllersPath = $modules_path . $settings['module_name'] . DS .'controllers' . DS;
-        $viewsPath = $modules_path . $settings['module_name'] . DS .'views' . DS;
+        $controllersPath = $modules_path . $settings['module_name'] . DS .'controllers';
+        $viewsPath = $modules_path . $settings['module_name'] . DS .'views';
 
         // Move folders
         if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'controllers' . DS)) {
+            if (is_dir($controllersPath)) {
+                $this->removeDir($controllersPath);
+            }
             rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'controllers' . DS, $controllersPath);
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'views' . DS)) {
+            if (is_dir($viewsPath)) {
+                $this->removeDir($viewsPath);
+            }
             rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'views' . DS, $viewsPath);
         }
 
         $cssPath = $publicPath . DS . 'css';
         if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS . 'css' . DS)) {
+            if (is_dir($cssPath . DS . $settings['module_name'])) {
+                $this->removeDir($cssPath . DS . $settings['module_name']);
+            }
             rename($modules_path . $settings['module_name'] . DS .'assets' . DS . 'css', $cssPath . DS . $settings['module_name']);
         }
 
         $jsPath = $publicPath . DS . 'js';
         if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS . 'js' . DS)) {
+            if (is_dir($jsPath . DS . $settings['module_name'])) {
+                $this->removeDir($jsPath . DS . $settings['module_name']);
+            }
             rename($modules_path . $settings['module_name'] . DS .'assets' . DS . 'js' . DS, $jsPath . DS . $settings['module_name']);
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'models' . DS)) {
+            $modelPath = $modules_path . $settings['module_name'] . DS . '..' . DS . '..' . DS . 'models' . DS . ucfirst($settings['module_name']);
+            if (is_dir($modelPath)) {
+                $this->removeDir($modelPath);
+            }
             rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'models' . DS,
-                $modules_path . $settings['module_name'] . DS . '..' . DS . '..' . DS . 'models' . DS . ucfirst($settings['module_name']) . DS);
+                $modelPath);
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models')) {
+            $testModelPath = $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'];
+            if (is_dir($testModelPath)) {
+                $this->removeDir($testModelPath);
+            }
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models' . DS,
-                $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'] . DS);
+                $testModelPath . DS);
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules')) {
+            $testModulePath = $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'] . DS . 'controllers';
+            if (is_dir($testModulePath)) {
+                $this->removeDir($testModulePath);
+            }
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules' . DS,
-                $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'] . DS);
+                $testModulePath . DS);
         }
 
         // Remove folders
@@ -104,5 +128,15 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS)) {
             rmdir($modules_path . $settings['module_name'] . DS . 'tests' . DS);
         }
+    }
+
+    public function removeDir($dir)
+    {
+        if ($objs = glob($dir."/*")) {
+            foreach($objs as $obj) {
+                is_dir($obj) ? $this->removeDir($obj) : unlink($obj);
+            }
+        }
+        rmdir($dir);
     }
 }
