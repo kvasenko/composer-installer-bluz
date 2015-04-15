@@ -85,12 +85,12 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models')) {
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models' . DS,
-                $rootPath . DS . 'tests' . DS . 'models' . DS . ucfirst($settings['module_name']) . DS);
+                $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'] . DS);
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules')) {
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules' . DS,
-                $rootPath . DS . 'tests' . DS . 'modules' . DS . ucfirst($settings['module_name']) . DS);
+                $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'] . DS);
         }
 
         // Remove folders
