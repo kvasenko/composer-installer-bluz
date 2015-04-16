@@ -68,13 +68,12 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
     public function removeDir($dir)
     {
-        $fs = new Filesystem();
         if ($objs = glob($dir."/*")) {
             foreach($objs as $obj) {
-                $fs->exists($obj) ? $this->removeDir($obj) : unlink($obj);
+                $this->getFs()->exists($obj) ? $this->removeDir($obj) : unlink($obj);
             }
         }
-        $fs->remove($dir);
+        $this->getFs()->remove($dir);
     }
 
     public function moveTests()
