@@ -12,6 +12,8 @@ use Composer\Plugin\PluginInterface;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Script\ScriptEvents;
 use Composer\Script\CommandEvent;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInterface
 {
@@ -51,91 +53,97 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
     public function moveFolders()
     {
+        $fs = new Filesystem();
+
         $settings = $this->installer->getSettings();
         $rootPath = realpath($_SERVER['DOCUMENT_ROOT']);
-        $modules_path = $rootPath . DS . $settings['modules_path'] . DS;
-        $publicPath = $rootPath . DS . 'public';
+        $modules_path = $rootPath . DIRECTORY_SEPARATOR . $settings['modules_path'] . DIRECTORY_SEPARATOR;
+        $publicPath = $rootPath . DIRECTORY_SEPARATOR . 'public';
+        $assetsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'assets' . DIRECTORY_SEPARATOR;
+        $testsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR;
+        $srcPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
 
-        $controllersPath = $modules_path . $settings['module_name'] . DS .'controllers';
-        $viewsPath = $modules_path . $settings['module_name'] . DS .'views';
+        $jsPath = $publicPath . DIRECTORY_SEPARATOR . 'js';
+        $cssPath = $publicPath . DIRECTORY_SEPARATOR . 'css';
 
-        // Move folders
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'controllers' . DS)) {
-            if (is_dir($controllersPath)) {
-                $this->removeDir($controllersPath);
+        $controllersPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'controllers';
+        $viewsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'views';
+        $modelPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR
+            . '..' . DIRECTORY_SEPARATOR
+            . '..' . DIRECTORY_SEPARATOR
+            . 'models' . DIRECTORY_SEPARATOR
+            . ucfirst($settings['module_name']);
+        $testModulePath = $rootPath . DIRECTORY_SEPARATOR
+            . 'tests' . DIRECTORY_SEPARATOR
+            . 'modules' . DIRECTORY_SEPARATOR
+            . $settings['module_name'];
+        $testModelPath = $rootPath . DIRECTORY_SEPARATOR
+            . 'tests' . DIRECTORY_SEPARATOR
+            . 'models' . DIRECTORY_SEPARATOR
+            . $settings['module_name'];
+
+        $finder = new Finder();
+        $finder->directories()->in($modules_path . $settings['module_name']);
+        $finder->path('src/')->ignoreUnreadableDirs();
+        $finder->path('assets/')->ignoreUnreadableDirs();
+        $finder->path('tests/')->ignoreUnreadableDirs();
+
+        $this->removeDir($controllersPath);
+        $this->removeDir($viewsPath);
+        $this->removeDir($modelPath);
+        $this->removeDir($jsPath . DIRECTORY_SEPARATOR . $settings['module_name']);
+        $this->removeDir($cssPath . DIRECTORY_SEPARATOR . $settings['module_name']);
+        $this->removeDir($testModulePath);
+        $this->removeDir($testModelPath);
+
+
+        foreach ($finder as $file) {
+            if ($fs->exists($file->getRealPath())) {
+                switch ($file->getBasename()) {
+                    case 'controllers':
+                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $controllersPath);
+                        break;
+                    case 'views':
+                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $viewsPath);
+                        break;
+                    case 'models':
+                        if (strpos($file->getRealPath(), 'tests'))
+                            $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModelPath);
+                        else $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
+                        break;
+                    case 'css':
+                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $cssPath . DIRECTORY_SEPARATOR . $settings['module_name']);
+                        break;
+                    case 'js':
+                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $jsPath . DIRECTORY_SEPARATOR . $settings['module_name']);
+                        break;
+                    case 'modules':
+                        @$fs->mkdir($testModulePath, 0755);
+                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModulePath . DIRECTORY_SEPARATOR . 'controllers/');
+                        break;
+                }
             }
-            rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'controllers' . DS, $controllersPath);
         }
-
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'views' . DS)) {
-            if (is_dir($viewsPath)) {
-                $this->removeDir($viewsPath);
-            }
-            rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'views' . DS, $viewsPath);
-        }
-
-        $cssPath = $publicPath . DS . 'css';
-        if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS . 'css' . DS)) {
-            if (is_dir($cssPath . DS . $settings['module_name'])) {
-                $this->removeDir($cssPath . DS . $settings['module_name']);
-            }
-            rename($modules_path . $settings['module_name'] . DS .'assets' . DS . 'css', $cssPath . DS . $settings['module_name']);
-        }
-
-        $jsPath = $publicPath . DS . 'js';
-        if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS . 'js' . DS)) {
-            if (is_dir($jsPath . DS . $settings['module_name'])) {
-                $this->removeDir($jsPath . DS . $settings['module_name']);
-            }
-            rename($modules_path . $settings['module_name'] . DS .'assets' . DS . 'js' . DS, $jsPath . DS . $settings['module_name']);
-        }
-
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'src' . DS . 'models' . DS)) {
-            $modelPath = $modules_path . $settings['module_name'] . DS . '..' . DS . '..' . DS . 'models' . DS . ucfirst($settings['module_name']);
-            if (is_dir($modelPath)) {
-                $this->removeDir($modelPath);
-            }
-            rename($modules_path . $settings['module_name'] . DS . 'src' . DS . 'models' . DS,
-                $modelPath);
-        }
-
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models')) {
-            $testModelPath = $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'];
-            if (is_dir($testModelPath)) {
-                $this->removeDir($testModelPath);
-            }
-            rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models' . DS,
-                $testModelPath . DS);
-        }
-
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules')) {
-            $testModulePath = $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'];
-            is_dir($testModulePath) ? $this->removeDir($testModulePath) :  @mkdir($testModulePath, 0755);
-            rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules' . DS,
-                $testModulePath . DS . 'controllers' . DS);
-        }
-
         // Remove folders
-
-        if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS)) {
-            rmdir($modules_path . $settings['module_name'] . DS .'assets' . DS);
+        if ($fs->exists($assetsPath)) {
+            $fs->remove($assetsPath);
         }
-        if (is_dir($modules_path . $settings['module_name'] . DS .'src' . DS)) {
-            rmdir($modules_path . $settings['module_name'] . DS .'src' . DS);
+        if ($fs->exists($srcPath)) {
+            $fs->remove($srcPath);
         }
-
-        if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS)) {
-            rmdir($modules_path . $settings['module_name'] . DS . 'tests' . DS);
+        if ($fs->exists($testsPath)) {
+            $fs->remove($testsPath);
         }
     }
 
     public function removeDir($dir)
     {
+        $fs = new Filesystem();
         if ($objs = glob($dir."/*")) {
             foreach($objs as $obj) {
-                is_dir($obj) ? $this->removeDir($obj) : unlink($obj);
+                $fs->exists($obj) ? $this->removeDir($obj) : unlink($obj);
             }
         }
-        rmdir($dir);
+        $fs->remove($dir);
     }
 }
