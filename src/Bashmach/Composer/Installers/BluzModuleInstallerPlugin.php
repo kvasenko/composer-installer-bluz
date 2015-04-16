@@ -102,7 +102,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models')) {
             $testModelPath = $rootPath . DS . 'tests' . DS . 'models' . DS . $settings['module_name'];
             if (is_dir($testModelPath)) {
-                @mkdir($testModelPath, 0755);
                 $this->removeDir($testModelPath);
             }
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'models' . DS,
@@ -110,15 +109,14 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
 
         if (is_dir($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules')) {
-            $testModulePath = $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'] . DS . 'controllers';
-            if (is_dir($testModulePath)) {
-                $this->removeDir($testModulePath);
-            }
+            $testModulePath = $rootPath . DS . 'tests' . DS . 'modules' . DS . $settings['module_name'];
+            is_dir($testModulePath) ? $this->removeDir($testModulePath) :  @mkdir($testModulePath, 0755);
             rename($modules_path . $settings['module_name'] . DS . 'tests' . DS . 'modules' . DS,
                 $testModulePath . DS . 'controllers' . DS);
         }
 
         // Remove folders
+
         if (is_dir($modules_path . $settings['module_name'] . DS .'assets' . DS)) {
             rmdir($modules_path . $settings['module_name'] . DS .'assets' . DS);
         }
