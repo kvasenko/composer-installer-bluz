@@ -18,6 +18,11 @@ use Symfony\Component\Finder\Finder;
 class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInterface
 {
     protected $installer;
+    protected $fs = null;
+    protected $publicPath;
+    protected $modulePath;
+    protected $rootPath;
+    protected $finder = null;
     /**
      * {@inheritDoc}
      */
@@ -53,87 +58,14 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
     public function moveFolders()
     {
-        $fs = new Filesystem();
+        $this->setRootPath(realpath($_SERVER['DOCUMENT_ROOT']));
+        $this->setPublicPath($this->getRootPath() . DIRECTORY_SEPARATOR . 'public');
+        $this->setModulePath($this->getRootPath() . DIRECTORY_SEPARATOR . $this->installer->getSettings('modules_path') . DIRECTORY_SEPARATOR);
 
-        $settings = $this->installer->getSettings();
-        $rootPath = realpath($_SERVER['DOCUMENT_ROOT']);
-        $modules_path = $rootPath . DIRECTORY_SEPARATOR . $settings['modules_path'] . DIRECTORY_SEPARATOR;
-        $publicPath = $rootPath . DIRECTORY_SEPARATOR . 'public';
-        $assetsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'assets' . DIRECTORY_SEPARATOR;
-        $testsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR;
-        $srcPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
-
-        $jsPath = $publicPath . DIRECTORY_SEPARATOR . 'js';
-        $cssPath = $publicPath . DIRECTORY_SEPARATOR . 'css';
-
-        $controllersPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'controllers';
-        $viewsPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR .'views';
-        $modelPath = $modules_path . $settings['module_name'] . DIRECTORY_SEPARATOR
-            . '..' . DIRECTORY_SEPARATOR
-            . '..' . DIRECTORY_SEPARATOR
-            . 'models' . DIRECTORY_SEPARATOR
-            . ucfirst($settings['module_name']);
-        $testModulePath = $rootPath . DIRECTORY_SEPARATOR
-            . 'tests' . DIRECTORY_SEPARATOR
-            . 'modules' . DIRECTORY_SEPARATOR
-            . $settings['module_name'];
-        $testModelPath = $rootPath . DIRECTORY_SEPARATOR
-            . 'tests' . DIRECTORY_SEPARATOR
-            . 'models' . DIRECTORY_SEPARATOR
-            . $settings['module_name'];
-
-        $finder = new Finder();
-        $finder->directories()->in($modules_path . $settings['module_name']);
-        $finder->path('src/')->ignoreUnreadableDirs();
-        $finder->path('assets/')->ignoreUnreadableDirs();
-        $finder->path('tests/')->ignoreUnreadableDirs();
-
-        $this->removeDir($controllersPath);
-        $this->removeDir($viewsPath);
-        $this->removeDir($modelPath);
-        $this->removeDir($jsPath . DIRECTORY_SEPARATOR . $settings['module_name']);
-        $this->removeDir($cssPath . DIRECTORY_SEPARATOR . $settings['module_name']);
-        $this->removeDir($testModulePath);
-        $this->removeDir($testModelPath);
-
-
-        foreach ($finder as $file) {
-            if ($fs->exists($file->getRealPath())) {
-                switch ($file->getBasename()) {
-                    case 'controllers':
-                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $controllersPath);
-                        break;
-                    case 'views':
-                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $viewsPath);
-                        break;
-                    case 'models':
-                        if (strpos($file->getRealPath(), 'tests'))
-                            $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModelPath);
-                        else $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
-                        break;
-                    case 'css':
-                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $cssPath . DIRECTORY_SEPARATOR . $settings['module_name']);
-                        break;
-                    case 'js':
-                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $jsPath . DIRECTORY_SEPARATOR . $settings['module_name']);
-                        break;
-                    case 'modules':
-                        @$fs->mkdir($testModulePath, 0755);
-                        $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModulePath . DIRECTORY_SEPARATOR . 'controllers/');
-                        break;
-                }
-            }
-        }
-        // Remove folders
-        if ($fs->exists($assetsPath)) {
-            $fs->remove($assetsPath);
-        }
-        if ($fs->exists($srcPath)) {
-            $fs->remove($srcPath);
-        }
-        if ($fs->exists($testsPath)) {
-            $fs->remove($testsPath);
-        }
+        $this->moveModule();
+        $this->moveAssets();
+        $this->moveTests();
+        $this->removeEmptyDir();
     }
 
     public function removeDir($dir)
@@ -145,5 +77,129 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
             }
         }
         $fs->remove($dir);
+    }
+
+    public function moveTests()
+    {
+        $finder = new Finder();
+        $settings = $this->installer->getSettings();
+        $finder->directories()->in($this->getModulePath() . $settings['module_name'])->path('tests/')->ignoreUnreadableDirs();
+        $fs = $this->getFs();
+        $testModulePath = $this->getRootPath() . DIRECTORY_SEPARATOR
+            . 'tests' . DIRECTORY_SEPARATOR
+            . 'modules' . DIRECTORY_SEPARATOR
+            . $settings['module_name'];
+        $testModelPath = $this->getRootPath() . DIRECTORY_SEPARATOR
+            . 'tests' . DIRECTORY_SEPARATOR
+            . 'models' . DIRECTORY_SEPARATOR
+            . $settings['module_name'];
+
+        foreach ($finder as $file) {
+            if ($file->getBasename() === 'modules') {
+                $this->removeDir($testModulePath);
+                $fs->mkdir($testModulePath, 0755);
+                $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModulePath . DIRECTORY_SEPARATOR . 'controllers/');
+            } else {
+                $this->removeDir($testModelPath);
+                $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModelPath);
+            }
+        }
+    }
+
+    public function moveAssets()
+    {
+        $finder = new Finder();
+        $settings = $this->installer->getSettings();
+        $finder->directories()->in($this->getModulePath() . $settings['module_name'])->path('assets/')->ignoreUnreadableDirs();
+        $fs = $this->getFs();
+        foreach ($finder as $file) {
+            $this->removeDir($this->getPublicPath() . DIRECTORY_SEPARATOR
+                . $file->getBasename() . DIRECTORY_SEPARATOR
+                . $settings['module_name']);
+            $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $this->getPublicPath() . DIRECTORY_SEPARATOR
+                . $file->getBasename() . DIRECTORY_SEPARATOR
+                . $settings['module_name']);
+        }
+    }
+
+    public function moveModule()
+    {
+        $finder = new Finder();
+        $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('src/')->ignoreUnreadableDirs();
+
+        $fs = $this->getFs();
+        $modelPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR
+            . '..' . DIRECTORY_SEPARATOR
+            . '..' . DIRECTORY_SEPARATOR
+            . 'models' . DIRECTORY_SEPARATOR
+            . ucfirst($this->installer->getSettings('module_name'));
+
+        foreach ($finder as $file) {
+            if ($file->getBasename() === 'models') {
+                $this->removeDir($modelPath);
+                $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
+            } else {
+                $this->removeDir($this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR . $file->getBasename());
+                $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR,
+                    $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR . $file->getBasename());
+            }
+        }
+    }
+
+    public function getFs()
+    {
+        if (!$this->fs) {
+            $this->fs = new Filesystem();
+        }
+        return $this->fs;
+    }
+
+    public function setPublicPath($path)
+    {
+        $this->publicPath = $path;
+    }
+
+    public function getPublicPath()
+    {
+        return $this->publicPath;
+    }
+
+    public function setRootPath($path)
+    {
+        $this->rootPath = $path;
+    }
+
+    public function getRootPath()
+    {
+        return $this->rootPath;
+    }
+
+    public function setModulePath($path)
+    {
+        $this->modulePath = $this->getRootPath() . DIRECTORY_SEPARATOR . $this->installer->getSettings('modules_path') . DIRECTORY_SEPARATOR;
+    }
+
+    public function getModulePath()
+    {
+        return $this->modulePath;
+    }
+
+    public function getFinder()
+    {
+        if ($this->finder) {
+            $this->finder = new Finder();
+        }
+        return $this->finder;
+    }
+
+    public function removeEmptyDir()
+    {
+        $assetsPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR .'assets' . DIRECTORY_SEPARATOR;
+        $testsPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR;
+        $srcPath = $this->getModulePath() . $this->installer->getSettings('module_name')  . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR;
+
+        $this->getFs()->remove($assetsPath);
+        $this->getFs()->remove($testsPath);
+        $this->getFs()->remove($srcPath);
     }
 }
