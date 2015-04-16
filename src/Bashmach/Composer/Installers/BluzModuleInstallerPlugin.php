@@ -28,9 +28,7 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
      */
     public function activate(Composer $composer, IOInterface $io)
     {
-        define('DS', DIRECTORY_SEPARATOR);
         $this->installer = new BluzModuleInstaller($io, $composer);
-
         $composer->getInstallationmanager()->addInstaller($this->installer);
     }
 
@@ -82,17 +80,16 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     public function moveTests()
     {
         $finder = new Finder();
-        $settings = $this->installer->getSettings();
-        $finder->directories()->in($this->getModulePath() . $settings['module_name'])->path('tests/')->ignoreUnreadableDirs();
+        $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('tests/')->ignoreUnreadableDirs();
         $fs = $this->getFs();
         $testModulePath = $this->getRootPath() . DIRECTORY_SEPARATOR
             . 'tests' . DIRECTORY_SEPARATOR
             . 'modules' . DIRECTORY_SEPARATOR
-            . $settings['module_name'];
+            . $this->installer->getSettings('module_name');
         $testModelPath = $this->getRootPath() . DIRECTORY_SEPARATOR
             . 'tests' . DIRECTORY_SEPARATOR
             . 'models' . DIRECTORY_SEPARATOR
-            . $settings['module_name'];
+            . $this->installer->getSettings('module_name');
 
         foreach ($finder as $file) {
             if ($file->getBasename() === 'modules') {
@@ -109,16 +106,16 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     public function moveAssets()
     {
         $finder = new Finder();
-        $settings = $this->installer->getSettings();
-        $finder->directories()->in($this->getModulePath() . $settings['module_name'])->path('assets/')->ignoreUnreadableDirs();
+        $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('assets/')->ignoreUnreadableDirs();
         $fs = $this->getFs();
+
         foreach ($finder as $file) {
             $this->removeDir($this->getPublicPath() . DIRECTORY_SEPARATOR
                 . $file->getBasename() . DIRECTORY_SEPARATOR
-                . $settings['module_name']);
+                . $this->installer->getSettings('module_name'));
             $fs->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $this->getPublicPath() . DIRECTORY_SEPARATOR
                 . $file->getBasename() . DIRECTORY_SEPARATOR
-                . $settings['module_name']);
+                . $this->installer->getSettings('module_name'));
         }
     }
 
@@ -174,7 +171,7 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         return $this->rootPath;
     }
 
-    public function setModulePath($path)
+    public function setModulePath()
     {
         $this->modulePath = $this->getRootPath() . DIRECTORY_SEPARATOR . $this->installer->getSettings('modules_path') . DIRECTORY_SEPARATOR;
     }
@@ -182,14 +179,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     public function getModulePath()
     {
         return $this->modulePath;
-    }
-
-    public function getFinder()
-    {
-        if ($this->finder) {
-            $this->finder = new Finder();
-        }
-        return $this->finder;
     }
 
     public function removeEmptyDir()
