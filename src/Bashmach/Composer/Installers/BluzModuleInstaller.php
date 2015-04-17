@@ -13,7 +13,11 @@ use Composer\Installer\LibraryInstaller;
 class BluzModuleInstaller extends LibraryInstaller
 {
 
+    /**
+     * @var string
+     */
     protected $settings;
+
     /**
      * {@inheritDoc}
      */
@@ -34,6 +38,7 @@ class BluzModuleInstaller extends LibraryInstaller
 
         return $path;
     }
+
     /**
      * {@inheritDoc}
      */
@@ -47,6 +52,12 @@ class BluzModuleInstaller extends LibraryInstaller
 
     }
 
+    /**
+     * Return settings
+     *
+     * @param null $key
+     * @return mixed
+     */
     public function getSettings($key = null)
     {
         if (isset($this->settings[$key]))

@@ -17,12 +17,42 @@ use Symfony\Component\Finder\Finder;
 
 class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInterface
 {
+    /**
+     * @var BluzModuleInstaller
+     */
     protected $installer;
+
+    /**
+     * @var null
+     */
     protected $fs = null;
+
+    /**
+     * Path to public directory
+     *
+     * @var string
+     */
     protected $publicPath;
+
+    /**
+     * Path to modules directory
+     *
+     * @var string
+     */
     protected $modulePath;
+
+    /**
+     * Path to root directory
+     *
+     * @var string
+     */
     protected $rootPath;
+
+    /**
+     * @var null|Finder
+     */
     protected $finder = null;
+
     /**
      * {@inheritDoc}
      */
@@ -32,6 +62,11 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $composer->getInstallationmanager()->addInstaller($this->installer);
     }
 
+    /**
+     * Event registration
+     *
+     * @return array
+     */
     public static function getSubscribedEvents() {
         $result = array(
             ScriptEvents::POST_INSTALL_CMD => array(
@@ -44,17 +79,32 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         return $result;
     }
 
+    /**
+     * Event processing onPostInstallCmd
+     *
+     * @param CommandEvent $event
+     */
     public function onPostInstallCmd(CommandEvent $event)
     {
         $this->moveFolders();
     }
 
+
+    /**
+     * Event processing onPostUpdateCmd
+     *
+     * @param CommandEvent $event
+     */
     public function onPostUpdateCmd(CommandEvent $event)
     {
         $this->moveFolders();
     }
 
-    public function moveFolders()
+
+    /**
+     *  Moving all directories
+     */
+    protected function moveFolders()
     {
         $this->setRootPath(realpath($_SERVER['DOCUMENT_ROOT']));
         $this->setPublicPath($this->getRootPath() . DIRECTORY_SEPARATOR . 'public');
@@ -66,7 +116,12 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $this->removeEmptyDir();
     }
 
-    public function removeDir($dir)
+    /**
+     * Remove directory
+     *
+     * @param $dir
+     */
+    protected function removeDir($dir)
     {
         if ($objs = glob($dir."/*")) {
             foreach($objs as $obj) {
@@ -76,7 +131,10 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $this->getFs()->remove($dir);
     }
 
-    public function moveTests()
+    /**
+     * Moving tests
+     */
+    protected function moveTests()
     {
         $finder = new Finder();
         $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('tests/')->ignoreUnreadableDirs();
@@ -102,7 +160,10 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
     }
 
-    public function moveAssets()
+    /**
+     * Moving assets files
+     */
+    protected function moveAssets()
     {
         $finder = new Finder();
         $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('assets/')->ignoreUnreadableDirs();
@@ -118,7 +179,10 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
     }
 
-    public function moveModule()
+    /**
+     * Moving controllers, models, views
+     */
+    protected function moveModule()
     {
         $finder = new Finder();
         $finder->directories()->in($this->getModulePath() . $this->installer->getSettings('module_name'))->path('src/')->ignoreUnreadableDirs();
@@ -142,7 +206,10 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
     }
 
-    public function getFs()
+    /**
+     * @return Filesystem
+     */
+    protected function getFs()
     {
         if (!$this->fs) {
             $this->fs = new Filesystem();
@@ -150,37 +217,66 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         return $this->fs;
     }
 
-    public function setPublicPath($path)
+    /**
+     * @param $path
+     */
+    protected function setPublicPath($path)
     {
         $this->publicPath = $path;
     }
 
-    public function getPublicPath()
+    /**
+     * Return path public directory
+     *
+     * @return mixed
+     */
+    protected function getPublicPath()
     {
         return $this->publicPath;
     }
 
-    public function setRootPath($path)
+    /**
+     * Set path root directory
+     *
+     * @param $path
+     */
+    protected function setRootPath($path)
     {
         $this->rootPath = $path;
     }
 
-    public function getRootPath()
+    /**
+     * Return path root directory
+     *
+     * @return mixed
+     */
+    protected function getRootPath()
     {
         return $this->rootPath;
     }
 
-    public function setModulePath()
+    /**
+     * Set path modules directory
+     */
+    protected function setModulePath()
     {
         $this->modulePath = $this->getRootPath() . DIRECTORY_SEPARATOR . $this->installer->getSettings('modules_path') . DIRECTORY_SEPARATOR;
     }
 
-    public function getModulePath()
+    /**
+     * Return path modules directory
+     *
+     * @return mixed
+     */
+    protected function getModulePath()
     {
         return $this->modulePath;
     }
 
-    public function removeEmptyDir()
+    /**
+     * Removing empty folders
+     */
+    protected function removeEmptyDir()
     {
         $assetsPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR .'assets' . DIRECTORY_SEPARATOR;
         $testsPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR;
