@@ -27,6 +27,6 @@
         }
     },
     "extra": {
-        "class": "BluzInstaller\\Composer\\Installers\\BluzModuleInstallerPlugin"
+        "class": "Bluz\\Composer\\Installers\\BluzModuleInstallerPlugin"
     }
 }
