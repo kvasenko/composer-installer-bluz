@@ -23,7 +23,7 @@
     },
     "autoload": {
         "psr-0": {
-            "BluzInstaller\\Composer": "src/"
+            "Bluz\\Composer": "src/"
         }
     },
     "extra": {
