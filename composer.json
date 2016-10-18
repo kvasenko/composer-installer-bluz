@@ -23,10 +23,10 @@
     },
     "autoload": {
         "psr-0": {
-            "Bashmach\\Composer": "src/"
+            "BluzInstaller\\Composer": "src/"
         }
     },
     "extra": {
-        "class": "Bashmach\\Composer\\Installers\\BluzModuleInstallerPlugin"
+        "class": "BluzInstaller\\Composer\\Installers\\BluzModuleInstallerPlugin"
     }
 }

@@ -1,14 +1,9 @@
 <?php
-/**
- * @author Pavel Machekhin <pavel.machekhin@gmail.com>
- * @created 2015-03-24 11:15
- */
 
 namespace Bashmach\Composer\Installers;
 
 use Composer\Package\PackageInterface;
 use Composer\Installer\LibraryInstaller;
-
 
 class BluzModuleInstaller extends LibraryInstaller
 {
@@ -21,19 +16,21 @@ class BluzModuleInstaller extends LibraryInstaller
     /**
      * {@inheritDoc}
      */
-    public function getInstallPath(PackageInterface $package)
+    public function getInstallPath(PackageInterface $package): string
     {
         exec('echo 222 >> /tmp/hello.world');
 
         $extra     = $package->getExtra();
         $rootExtra = $this->composer->getPackage()->getExtra();
-        $this->settings  = array_merge($rootExtra['bluz'], $extra['bluz']);
+        $this->settings  = $extra['bluz'];
+
         if (empty($this->settings['modules_path'])) {
             throw new \Exception('modules_path is not defined');
         }
         if (empty($this->settings['module_name'])) {
             throw new \Exception('module_name is not defined');
         }
+
         $path = $this->settings['modules_path'] . '/' . $this->settings['module_name'];
 
         return $path;
@@ -42,7 +39,7 @@ class BluzModuleInstaller extends LibraryInstaller
     /**
      * {@inheritDoc}
      */
-    public function supports($packageType)
+    public function supports($packageType): boolean
     {
         return $packageType === 'bluz-module';
     }
@@ -55,13 +52,14 @@ class BluzModuleInstaller extends LibraryInstaller
     /**
      * Return settings
      *
-     * @param null $key
+     * @param string $key
      * @return mixed
      */
-    public function getSettings($key = null)
+    public function getSettings(string $key)
     {
         if (isset($this->settings[$key]))
             return $this->settings[$key];
+
         return $this->settings;
     }
 
