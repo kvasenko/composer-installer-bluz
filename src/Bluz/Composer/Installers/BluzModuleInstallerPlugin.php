@@ -67,14 +67,14 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
      */
     public static function getSubscribedEvents(): array
     {
-        $result = array(
-            ScriptEvents::POST_INSTALL_CMD => array(
-                array( 'onPostInstallCmd', 0 )
+        $result = [
+            ScriptEvents::POST_INSTALL_CMD => [
+                ['onPostInstallCmd', 0]
             ),
-            ScriptEvents::POST_UPDATE_CMD  => array(
-                array( 'onPostUpdateCmd', 0 )
-            ),
-        );
+            ScriptEvents::POST_UPDATE_CMD  => [
+                ['onPostUpdateCmd', 0]
+            ],
+        ];
 
         return $result;
     }
@@ -126,7 +126,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     protected function removeDir($dir)
     {
         if ($objs = glob($dir."/*")) {
-
             foreach($objs as $obj) {
                 $this->getFilesystem()->exists($obj) ? $this->removeDir($obj) : unlink($obj);
             }
@@ -160,21 +159,16 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
             $this->installer->getSettings('module_name');
 
         foreach ($this->getFinder() as $file) {
-
             if ($file->getBasename() === 'modules') {
-
                 $this->removeDir($testModulePath);
                 $filesystem->mkdir($testModulePath, self::PERMISSION_CODE);
                 $filesystem->rename(
                     $file->getRealPath() . DIRECTORY_SEPARATOR,
                     $testModulePath . DIRECTORY_SEPARATOR . 'controllers/'
                 );
-
             } else {
-
                 $this->removeDir($testModelPath);
                 $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModelPath);
-
             }
         }
     }
@@ -185,8 +179,8 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     protected function moveAssets()
     {
         $this->getFinder()
-            ->directories()->
-            in(
+            ->directories()
+            ->in(
                 $this->getModulePath() .
                 $this->installer->getSettings('module_name')
             )
@@ -196,7 +190,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $filesystem = $this->getFilesystem();
 
         foreach ($this->getFinder() as $file) {
-
             $this->removeDir($this->getPublicPath() . DIRECTORY_SEPARATOR .
                 $file->getBasename() . DIRECTORY_SEPARATOR .
                 $this->installer->getSettings('module_name'));
@@ -233,14 +226,12 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
             ucfirst($this->installer->getSettings('module_name'));
 
         foreach ($this->getFinder() as $file) {
-
             if ($file->getBasename() === 'models') {
 
                 $this->removeDir($modelPath);
                 $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
 
             } else {
-
                 $this->removeDir(
                     $this->getModulePath() .
                     $this->installer->getSettings('module_name') .
@@ -263,7 +254,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     protected function getFilesystem()
     {
         if (!$this->filesystem) {
-
             $this->filesystem = new Filesystem();
         }
 
@@ -276,7 +266,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     protected function getFinder()
     {
         if (!$this->finder) {
-
             $this->finder = new Finder();
         }
 

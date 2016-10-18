@@ -57,8 +57,9 @@ class BluzModuleInstaller extends LibraryInstaller
      */
     public function getSettings(string $key)
     {
-        if (isset($this->settings[$key]))
+        if (isset($this->settings[$key])) {
             return $this->settings[$key];
+        }
 
         return $this->settings;
     }
