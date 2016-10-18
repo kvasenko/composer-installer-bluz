@@ -70,10 +70,10 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $result = [
             ScriptEvents::POST_INSTALL_CMD => [
                 ['onPostInstallCmd', 0]
-            ),
+            ],
             ScriptEvents::POST_UPDATE_CMD  => [
                 ['onPostUpdateCmd', 0]
-            ],
+            ]
         ];
 
         return $result;
@@ -227,10 +227,8 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
         foreach ($this->getFinder() as $file) {
             if ($file->getBasename() === 'models') {
-
                 $this->removeDir($modelPath);
                 $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
-
             } else {
                 $this->removeDir(
                     $this->getModulePath() .
