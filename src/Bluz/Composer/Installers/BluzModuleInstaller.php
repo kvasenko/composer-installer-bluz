@@ -39,7 +39,7 @@ class BluzModuleInstaller extends LibraryInstaller
     /**
      * {@inheritDoc}
      */
-    public function supports($packageType): boolean
+    public function supports($packageType): bool
     {
         return $packageType === 'bluz-module';
     }
