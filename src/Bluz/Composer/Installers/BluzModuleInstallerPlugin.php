@@ -1,6 +1,6 @@
 <?php
 
-namespace Bashmach\Composer\Installers;
+namespace Bluz\Composer\Installers;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
