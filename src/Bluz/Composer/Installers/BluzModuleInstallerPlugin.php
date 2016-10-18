@@ -7,7 +7,7 @@ use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Script\ScriptEvents;
-use Composer\Script\CommandEvent;
+use Composer\Script\Event;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
@@ -82,9 +82,9 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     /**
      * Event processing onPostInstallCmd
      *
-     * @param CommandEvent $event
+     * @param Event $event
      */
-    public function onPostInstallCmd(CommandEvent $event)
+    public function onPostInstallCmd(Event $event)
     {
         $this->moveFolders();
     }
@@ -93,9 +93,9 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     /**
      * Event processing onPostUpdateCmd
      *
-     * @param CommandEvent $event
+     * @param Event $event
      */
-    public function onPostUpdateCmd(CommandEvent $event)
+    public function onPostUpdateCmd(Event $event)
     {
         $this->moveFolders();
     }
