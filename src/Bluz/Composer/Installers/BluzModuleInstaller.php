@@ -18,8 +18,6 @@ class BluzModuleInstaller extends LibraryInstaller
      */
     public function getInstallPath(PackageInterface $package): string
     {
-        exec('echo 222 >> /tmp/hello.world');
-
         $extra     = $package->getExtra();
         $rootExtra = $this->composer->getPackage()->getExtra();
         $this->settings  = $extra['bluz'];
