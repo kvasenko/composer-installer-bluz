@@ -20,7 +20,7 @@ class BluzModuleInstaller extends LibraryInstaller
     {
         $extra     = $package->getExtra();
         $rootExtra = $this->composer->getPackage()->getExtra();
-        $this->settings  = $extra['bluz'];
+        $this->settings  = array_merge($rootExtra, $extra['bluz']);
 
         if (empty($this->settings['modules_path'])) {
             throw new \Exception('modules_path is not defined');
