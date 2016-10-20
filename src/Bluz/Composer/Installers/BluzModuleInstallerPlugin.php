@@ -3,11 +3,12 @@
 namespace Bluz\Composer\Installers;
 
 use Composer\Composer;
+use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
-use Composer\EventDispatcher\EventSubscriberInterface;
-use Composer\Script\ScriptEvents;
 use Composer\Script\Event;
+use Composer\Script\PackageEvent;
+use Composer\Script\ScriptEvents;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 
@@ -26,27 +27,6 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     protected $filesystem = null;
 
     /**
-     * Path to public directory
-     *
-     * @var string
-     */
-    protected $publicPath;
-
-    /**
-     * Path to modules directory
-     *
-     * @var string
-     */
-    protected $modulePath;
-
-    /**
-     * Path to root directory
-     *
-     * @var string
-     */
-    protected $rootPath;
-
-    /**
      * @var null|Finder
      */
     protected $finder = null;
@@ -57,13 +37,11 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
     public function activate(Composer $composer, IOInterface $io)
     {
         $this->installer = new BluzModuleInstaller($io, $composer);
-        $composer->getInstallationmanager()->addInstaller($this->installer);
+        $composer->getInstallationManager()->addInstaller($this->installer);
     }
 
     /**
-     * Event registration
-     *
-     * @return array
+     * {@inheritDoc}
      */
     public static function getSubscribedEvents(): array
     {
@@ -73,115 +51,74 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
             ],
             ScriptEvents::POST_UPDATE_CMD  => [
                 ['onPostUpdateCmd', 0]
+            ],
+            ScriptEvents::PRE_PACKAGE_UNINSTALL  => [
+                ['onPrePackageUninstall', 0]
             ]
         ];
 
         return $result;
     }
 
-    /**
-     * Event processing onPostInstallCmd
-     *
-     * @param Event $event
-     */
     public function onPostInstallCmd(Event $event)
     {
         $this->moveFolders();
     }
 
+    public function onPrePackageUninstall(PackageEvent $event)
+    {
+        $this->removeModule();
+        $this->removeModel();
+        $this->removeTests();
+        $this->removeAssetsFiles();
+    }
 
-    /**
-     * Event processing onPostUpdateCmd
-     *
-     * @param Event $event
-     */
     public function onPostUpdateCmd(Event $event)
     {
         $this->moveFolders();
     }
 
-
-    /**
-     *  Moving all directories
-     */
     protected function moveFolders()
     {
-        $this->setRootPath(realpath($_SERVER['DOCUMENT_ROOT']));
-        $this->setPublicPath($this->getRootPath() . DIRECTORY_SEPARATOR . 'public');
-        $this->setModulePath(
-            $this->getRootPath() . DIRECTORY_SEPARATOR .
-            $this->installer->getSettings('modules_path') . DIRECTORY_SEPARATOR);
-
         $this->moveModule();
         $this->moveAssets();
         $this->moveTests();
         $this->removeEmptyDir();
     }
 
-    /**
-     * Remove directory
-     *
-     * @param $dir
-     */
-    protected function removeDir($dir)
-    {
-        if ($objs = glob($dir."/*")) {
-            foreach($objs as $obj) {
-                $this->getFilesystem()->exists($obj) ? $this->removeDir($obj) : unlink($obj);
-            }
-        }
-        $this->getFilesystem()->remove($dir);
-    }
-
-    /**
-     * Moving tests
-     */
     protected function moveTests()
     {
         $this->getFinder()
             ->directories()
             ->in(
-                $this->getModulePath() . $this->installer->getSettings('module_name')
+                $this->getModulesPath() . $this->installer->getSettings('module_name')
             )
             ->path('tests/')
             ->ignoreUnreadableDirs();
 
         $filesystem = $this->getFilesystem();
 
-        $testModulePath = $this->getRootPath() . DIRECTORY_SEPARATOR .
-            'tests' . DIRECTORY_SEPARATOR .
-            'modules' . DIRECTORY_SEPARATOR .
-            $this->installer->getSettings('module_name');
-
-        $testModelPath = $this->getRootPath() . DIRECTORY_SEPARATOR .
-            'tests' . DIRECTORY_SEPARATOR .
-            'models' . DIRECTORY_SEPARATOR .
-            $this->installer->getSettings('module_name');
-
         foreach ($this->getFinder() as $file) {
             if ($file->getBasename() === 'modules') {
-                $this->removeDir($testModulePath);
-                $filesystem->mkdir($testModulePath, self::PERMISSION_CODE);
+                $this->removeDir($this->getTestModulePath());
+                $filesystem->mkdir($this->getTestModulePath(), self::PERMISSION_CODE);
                 $filesystem->rename(
                     $file->getRealPath() . DIRECTORY_SEPARATOR,
-                    $testModulePath . DIRECTORY_SEPARATOR . 'controllers/'
+                    $this->getTestModulePath() . DIRECTORY_SEPARATOR . 'controllers/'
                 );
             } else {
-                $this->removeDir($testModelPath);
-                $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $testModelPath);
+                $this->removeDir($this->getTestModelPath());
+                $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $this->getTestModelPath());
             }
         }
     }
 
-    /**
-     * Moving assets files
-     */
     protected function moveAssets()
     {
         $this->getFinder()
             ->directories()
             ->in(
-                $this->getModulePath() .
+                $this->getModulesPath() .
                 $this->installer->getSettings('module_name')
             )
             ->path('assets/')
@@ -203,15 +140,12 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
     }
 
-    /**
-     * Moving controllers, models, views
-     */
     protected function moveModule()
     {
         $this->getFinder()
             ->directories()
             ->in(
-                $this->getModulePath() .
+                $this->getModulesPath() .
                 $this->installer->getSettings('module_name')
             )
             ->path('src/')
@@ -219,26 +153,20 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
 
         $filesystem = $this->getFilesystem();
 
-        $modelPath = $this->getModulePath() . $this->installer->getSettings('module_name') . DIRECTORY_SEPARATOR .
-            '..' . DIRECTORY_SEPARATOR .
-            '..' . DIRECTORY_SEPARATOR .
-            'models' . DIRECTORY_SEPARATOR .
-            ucfirst($this->installer->getSettings('module_name'));
-
         foreach ($this->getFinder() as $file) {
             if ($file->getBasename() === 'models') {
-                $this->removeDir($modelPath);
-                $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $modelPath);
+                $this->removeDir($this->getModelPath());
+                $filesystem->rename($file->getRealPath() . DIRECTORY_SEPARATOR, $this->getModelPath());
             } else {
                 $this->removeDir(
-                    $this->getModulePath() .
+                    $this->getModulesPath() .
                     $this->installer->getSettings('module_name') .
                     DIRECTORY_SEPARATOR .
                     $file->getBasename());
 
                 $filesystem->rename(
                     $file->getRealPath() . DIRECTORY_SEPARATOR,
-                    $this->getModulePath() .
+                    $this->getModulesPath() .
                     $this->installer->getSettings('module_name') .
                     DIRECTORY_SEPARATOR .
                     $file->getBasename());
@@ -246,10 +174,31 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         }
     }
 
-    /**
-     * @return Filesystem
-     */
-    protected function getFilesystem()
+    protected function getTestModulePath(): string
+    {
+        return $this->getRootPath() . DIRECTORY_SEPARATOR .
+        'tests' . DIRECTORY_SEPARATOR .
+        'modules' . DIRECTORY_SEPARATOR .
+        $this->installer->getSettings('module_name');
+    }
+
+    protected function getTestModelPath(): string
+    {
+        return $this->getRootPath() . DIRECTORY_SEPARATOR .
+        'tests' . DIRECTORY_SEPARATOR .
+        'models' . DIRECTORY_SEPARATOR .
+        $this->installer->getSettings('module_name');
+    }
+
+    protected function getModelPath(): string
+    {
+        return $this->getModulesPath() . DIRECTORY_SEPARATOR .
+        '..' . DIRECTORY_SEPARATOR .
+        'models' . DIRECTORY_SEPARATOR .
+        ucfirst($this->installer->getSettings('module_name'));
+    }
+
+    protected function getFilesystem(): Filesystem
     {
         if (!$this->filesystem) {
             $this->filesystem = new Filesystem();
@@ -258,10 +207,7 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         return $this->filesystem;
     }
 
-    /**
-     * @return Finder
-     */
-    protected function getFinder()
+    protected function getFinder(): Finder
     {
         if (!$this->finder) {
             $this->finder = new Finder();
@@ -270,81 +216,37 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         return $this->finder;
     }
 
-    /**
-     * @param $path
-     */
-    protected function setPublicPath($path)
-    {
-        $this->publicPath = $path;
-    }
-
-    /**
-     * Return path public directory
-     *
-     * @return mixed
-     */
     protected function getPublicPath(): string
     {
-        return $this->publicPath;
+        return $this->getRootPath() . DIRECTORY_SEPARATOR . 'public';
     }
 
-    /**
-     * Set path root directory
-     *
-     * @param $path
-     */
-    protected function setRootPath($path)
+    protected function getRootPath(): string
     {
-        $this->rootPath = $path;
+        return realpath($_SERVER['DOCUMENT_ROOT']);
     }
 
-    /**
-     * Return path root directory
-     *
-     * @return mixed
-     */
-    protected function getRootPath()
+    protected function getModulesPath(): string
     {
-        return $this->rootPath;
+        return $this->getRootPath() .
+        DIRECTORY_SEPARATOR .
+        $this->installer->getSettings('modules_path') .
+        DIRECTORY_SEPARATOR;
     }
 
-    /**
-     * Set path modules directory
-     */
-    protected function setModulePath()
-    {
-        $this->modulePath = $this->getRootPath() .
-            DIRECTORY_SEPARATOR .
-            $this->installer->getSettings('modules_path') .
-            DIRECTORY_SEPARATOR;
-    }
-
-    /**
-     * Return path modules directory
-     *
-     * @return mixed
-     */
-    protected function getModulePath()
-    {
-        return $this->modulePath;
-    }
-
-    /**
-     * Removing empty folders
-     */
     protected function removeEmptyDir()
     {
-        $assetsPath = $this->getModulePath() .
+        $assetsPath = $this->getModulesPath() .
             $this->installer->getSettings('module_name') .
             DIRECTORY_SEPARATOR .'assets' .
             DIRECTORY_SEPARATOR;
 
-        $testsPath = $this->getModulePath() .
+        $testsPath = $this->getModulesPath() .
             $this->installer->getSettings('module_name') .
             DIRECTORY_SEPARATOR . 'tests' .
             DIRECTORY_SEPARATOR;
 
-        $srcPath = $this->getModulePath() .
+        $srcPath = $this->getModulesPath() .
             $this->installer->getSettings('module_name') .
             DIRECTORY_SEPARATOR .
             'src' .
@@ -353,5 +255,62 @@ class BluzModuleInstallerPlugin implements PluginInterface, EventSubscriberInter
         $this->getFilesystem()->remove($assetsPath);
         $this->getFilesystem()->remove($testsPath);
         $this->getFilesystem()->remove($srcPath);
+    }
+
+    protected function removeDir(string $dir)
+    {
+        if ($objs = glob($dir."/*")) {
+            foreach($objs as $obj) {
+                $this->getFilesystem()->exists($obj) ? $this->removeDir($obj) : unlink($obj);
+            }
+        }
+        $this->getFilesystem()->remove($dir);
+    }
+
+    protected function removeModel()
+    {
+        $this->getFilesystem()->remove($this->getModelPath());
+    }
+
+    protected function removeTests()
+    {
+        $this->getFilesystem()->remove($this->getTestModelPath());
+        $this->getFilesystem()->remove($this->getTestModulePath());
+    }
+
+    protected function removeAssetsFiles()
+    {
+        $this->getFilesystem()->remove(
+            $this->getPublicPath() . DIRECTORY_SEPARATOR .
+            'js' . DIRECTORY_SEPARATOR .
+            $this->installer->getSettings('module_name')
+        );
+
+        $this->getFilesystem()->remove(
+            $this->getPublicPath() . DIRECTORY_SEPARATOR .
+            'css' . DIRECTORY_SEPARATOR .
+            $this->installer->getSettings('module_name')
+        );
+
+        $this->getFilesystem()->remove(
+            $this->getPublicPath() . DIRECTORY_SEPARATOR .
+            'fonts' . DIRECTORY_SEPARATOR .
+            $this->installer->getSettings('module_name')
+        );
+    }
+
+    protected function removeModule()
+    {
+        $this->getFinder()
+            ->directories()
+            ->in(
+                $this->getModulesPath()
+            )
+            ->path($this->installer->getSettings('module_name'))
+            ->ignoreUnreadableDirs();
+
+        foreach ($this->getFinder() as $file) {
+            $this->getFilesystem()->remove($file->getRealPath());
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace Bluz\Composer\Installers;
 
 use Composer\Package\PackageInterface;
 use Composer\Installer\LibraryInstaller;
+use Composer\Repository\InstalledRepositoryInterface;
 
 class BluzModuleInstaller extends LibraryInstaller
 {
@@ -42,9 +43,10 @@ class BluzModuleInstaller extends LibraryInstaller
         return $packageType === 'bluz-module';
     }
 
-    protected function uninstallModule()
+    public function uninstall(InstalledRepositoryInterface $repo, PackageInterface $package)
     {
-
+        $this->binaryInstaller->removeBinaries($package);
+        $repo->removePackage($package);
     }
 
     /**
